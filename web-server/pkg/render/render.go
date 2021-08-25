@@ -7,6 +7,10 @@ import (
 	"log"
 	"net/http"
 	"path/filepath"
+
+	"github.com/tatyanayagolnikov/go-website/pkg/config"
+ // "github.com/tatyanayagolnikov/go-website/pkg/handlers"
+	"github.com/tatyanayagolnikov/go-website/pkg/models"
 )
 
 // RENDER - refers to taking a computer image or file,
@@ -14,27 +18,47 @@ import (
 
 // CACHE - a high speed data storage layer which stores
 // a subset of data. So, future requests for that data are served up
-// faster than is possible by accessing the datas primary location 
+// faster than is possible by accessing the datas primary location
 
-var functions = template.FuncMap{}
+var functions = template.FuncMap{
+
+}
+
+var app *config.AppConfig
+
+// NewTemplates - sets the config for the template package
+func NewTemplates(a *config.AppConfig) {
+	app = a
+}
+
+func AddDefaultData(td *models.TemplateData) *models.TemplateData {
+	return td
+
+}
 
 // RenderTemplate - renders template using html/template
-func RenderTemplate(w http.ResponseWriter, tmpl string) {
-	tc, err := CreateTemplateCache()
-	if err != nil {
-		log.Fatal(err)
+func RenderTemplate(w http.ResponseWriter, tmpl string, td *models.TemplateData) {
+	var tc map[string]*template.Template
+	
+	if app.UseCache {
+		// get the template cache from the app config
+		tc = app.TemplateCache
+	} else {
+		tc, _ = CreateTemplateCache()
 	}
 
 	t, ok := tc[tmpl]
 	if !ok {
-		log.Fatal(err)
+		log.Fatal("Could not get template from template chache")
 	}
 
 	buf := new(bytes.Buffer)
 
-	_ = t.Execute(buf, nil)
+	td = AddDefaultData(td)
 
-	_, err = buf.WriteTo(w)
+	_ = t.Execute(buf, td)
+
+	_, err := buf.WriteTo(w)
 	if err != nil{
 		fmt.Println("Error writing template to browser", err)
 	}
